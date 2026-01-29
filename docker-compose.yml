@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  api:
+    build: ./api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./models:/app/models
+      - ./output:/app/output
+      # Mount scripts to ensure we have the latest version if managed outside build context, 
+      # though copy in Dockerfile should suffice. 
+      # Better to rely on image copy for scripts, but models need volume.
+      - ./scripts:/app/scripts
+    env_file:
+      - .env
+    # Execute download script before starting the server
+    command: /bin/bash -c "chmod +x /app/scripts/download_model.sh && /app/scripts/download_model.sh && uvicorn main:app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  ui:
+    build: ./ui
+    ports:
+      - "${UI_PORT:-8501}:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - API_URL=http://api:8000/detect
