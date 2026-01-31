@@ -2,7 +2,7 @@ fastapi
 uvicorn
 python-multipart
 Pillow
-torch
-torchvision
+# torch and torchvision installed manually for cpu
 opencv-python-headless
 requests
+ultralytics

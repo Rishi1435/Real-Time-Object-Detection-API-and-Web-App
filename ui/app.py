@@ -18,7 +18,7 @@ confidence_threshold = st.sidebar.slider(
     "Confidence Threshold", 
     min_value=0.0, 
     max_value=1.0, 
-    value=0.25, 
+    value=0.40, 
     step=0.05
 )
 
@@ -61,44 +61,7 @@ if uploaded_file is not None:
                         st.json(detections)
                         
                     # Display annotated image if possible
-                    # Since API saves to disk, we can't easily retrieve the file unless we serve it back.
-                    # The prompt requirement says: "On a successful response, it displays the returned annotated image".
-                    # However, the API spec says: "on every successful call... save... to specific output directory".
-                    # It DOES NOT say the API returns the image in the response body.
-                    # The response body is JSON.
-                    # If I need to display the annotated image in Streamlit, I have a few options:
-                    # 1. The API should ideally return the image or a URL.
-                    # 2. Or Streamlit mounts the SAME output volume and reads it.
-                    # The prompt verification for UI says: 
-                    # "On a successful response, it displays the returned annotated image and the JSON summary."
-                    # PLEASE NOTE: "displays the returned annotated image" implies the API returns it OR we fetch it.
-                    # Checking requirement 8: "The API must save... to output/last_annotated.jpg".
-                    # Checking requirement 9 (UI): "On a successful response, it displays the returned annotated image".
-                    # There is a slight disconnect. If API returns JSON only, how does UI get the image?
-                    # OPTION A: UI manually draws boxes on its copy of the image using the JSON data.
-                    # OPTION B: UI reads from the shared volume `output/last_annotated.jpg`.
-                    # OPTION C: Update API to return image? User said "API Design ... Return JSON response" but specifically "Design your API response to be clear...".
-                    # BUT Requirement 5 specifies the response JSON schema. It does NOT include the image data.
-                    # So Option A (Draw locally) or Option B (Shared Volume) are viable.
-                    # Given they are in containers, sharing a volume `output` is the way to go if we want to show "the api's version".
-                    # But if multiple users use it, `last_annotated.jpg` would be overwritten. Race condition.
-                    # However, for this assignment, "last_annotated.jpg" seems to be a single global debug file.
-                    # The BEST UX is Option A: Use the JSON boxes to draw on the frontend or Option B: Shared Volume.
-                    # Let's look at `docker-compose.yml` template in prompt.
-                    # `models` and `output` are volumes.
-                    # `ui` container does NOT have `output` volume mounted in the prompt's `docker-compose.yml` example!!!
-                    # Wait, let's re-read the `docker-compose.yml` template in Step 5 of the prompt.
-                    # Service `api` has `volumes: - ./output:/app/output`.
-                    # Service `ui` has NO volumes.
-                    # So `ui` CANNOT see `last_annotated.jpg`.
-                    # Conclusion: The UI should probably DRAW the boxes itself based on JSON response, 
-                    # OR the prompt implies the API response might return the image but the JSON schema doesn't show it.
-                    # "On a successful response, it displays the returned annotated image" -> slightly ambiguous.
-                    # Actually, "The image should visually represent the data returned in the JSON response." - referring to the saved file.
-                    # Requirement 9: "On a successful response, it displays the returned annotated image".
-                    # This might be loose wording for "displays the image with annotations".
-                    # I will implement Option A: Draw boxes on the original image using PIL in Streamlit.
-                    # This is robust and stateless. 
+                    # We draw the boxes locally using the JSON response for a stateless experience. 
                     
                     # Drawing logic
                     if detections:
